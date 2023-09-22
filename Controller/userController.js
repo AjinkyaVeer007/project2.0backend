@@ -1,4 +1,5 @@
 const User = require("../Model/user.login")
+const Company = require("../Model/user.company")
 const jwt = require("jsonwebtoken")
 const bcrypt = require("bcryptjs")
 require("express")
@@ -96,5 +97,39 @@ exports.login = async (req, res) => {
     } catch (error) {
         console.log(error);
         console.log("Fail to login");
+    }
+}
+
+exports.createcompany = async (req, res) => {
+    try {
+        // collect data frontend frontend
+        const {userId, name, url} = req.body
+
+        // validation for frontend
+        if(!userId && !name){
+            return res.status(400).send("Company name is mandatory")
+        }
+
+        // check wheather user has already created company or not
+        const existingUser = await Company.findOne({userId})
+
+        if(existingUser){
+            return res.status(400).send("You have already created a company") 
+        }
+
+        // store data in database
+        const companyData = await Company.create({
+            userId, name, url
+        })
+
+        res.status(200).json({
+            status: true,
+            data: companyData
+        })
+
+
+    } catch (error) {
+        console.log(error);
+        console.log("Fail to create company");
     }
 }
