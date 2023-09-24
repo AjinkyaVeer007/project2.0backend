@@ -136,8 +136,22 @@ exports.createcompany = async (req, res) => {
     }
 }
 
+exports.editcompany = async (req, res) => {
+    try {
+       await Company.findByIdAndUpdate(req.params.id, req.body);
+       res.status(200).json({
+        status: true,
+        message: "Company details updated successfully"
+    })
+    } catch (error) {
+        console.log(error);
+        console.log("Fail to update company details");
+    }
+}
+
 exports.createproject = async (req, res) => {
-    // get data from frontend
+    try {
+            // get data from frontend
     const {name, startDate, proposeEndDate, priority, managerIds, employeeIds, adminId} = req.body
 
     // validation for frontend
@@ -154,4 +168,34 @@ exports.createproject = async (req, res) => {
         message: "Project Created Successfully",
         data : projectData
     })
+    } catch (error) {
+        console.log(error);
+        console.log("Fail to create project");
+    }
+}
+
+exports.editproject = async (req, res) => {
+    try {
+       await Project.findByIdAndUpdate(req.params.id, req.body);
+       res.status(200).json({
+        status: true,
+        message: "Project details updated successfully"
+    })
+    } catch (error) {
+        console.log(error);
+        console.log("Fail to update project details");
+    }
+}
+
+exports.deleteproject = async (req, res) => {
+    try {
+       await Project.findByIdAndDelete(req.params.id);
+       res.status(200).json({
+        status: true,
+        message: "Project details deleted successfully"
+    })
+    } catch (error) {
+        console.log(error);
+        console.log("Fail to delete project details");
+    }
 }
