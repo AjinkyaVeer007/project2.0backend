@@ -19,7 +19,7 @@ exports.register = async (req, res) => {
         const existingUser = await User.findOne({email})
 
         if(existingUser){
-            return res.status(400).send("User is already exist")
+            return res.status(400).send("You have already registered. Please login.")
         }
 
         // encrypt password
@@ -38,11 +38,15 @@ exports.register = async (req, res) => {
             {expiresIn: "2h"}
         )
 
-        user.token = token
+        const options = {
+            expires: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+          };
+
         user.password = undefined
 
-        res.status(200).json({
-            data : user,
+        res.status(200).cookie("token", token, options).json({
+            status: true,
+            user,
             message: "User Register Successfully"
         })
     } catch (error) {
@@ -54,10 +58,10 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     try {
         // collect data from frontend
-        const {email, password, userType} = req.body
+        const {email, password} = req.body
 
         // validate the data
-        if(!email || !password || !userType){
+        if(!email || !password){
            return res.status(401).send("All fields are mandatory")
         }
 
@@ -65,7 +69,7 @@ exports.login = async (req, res) => {
         const user = await User.findOne({email})
 
         if(!user){
-            return res.status(400).send("User is not registered")
+            return res.status(400).send("You need to register first for login")
         }
 
         //match the password & create token and send
@@ -79,15 +83,13 @@ exports.login = async (req, res) => {
           { expiresIn: "2h" }
         );
         user.password = undefined;
-        user.token = token;
   
         const options = {
           expires: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
         };
   
         res.status(200).cookie("token", token, options).json({
-          success: true,
-          token,
+          status: true,
           user,
         });
   
