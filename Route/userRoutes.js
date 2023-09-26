@@ -4,17 +4,23 @@ const connectDB = require("../Config/database")
 
 connectDB.connect()
 
-const {register, login, createcompany, createproject, editcompany, editproject, deleteproject} = require("../Controller/userController")
+const {register, login, createcompany, createproject, editcompany, editproject, deleteproject, getcompany, getemployees, getprojects} = require("../Controller/userController")
 
 router.post("/register", register)
 
 router.post("/login", login)
 
+router.post("/getemployees", getemployees)
+
 router.post("/createcompany", createcompany)
+
+router.post("/getcompany", getcompany)
+
+router.put("/updatecompanydetails/:id", editcompany)
 
 router.post("/createproject", createproject)
 
-router.put("/updatecompanydetails/:id", editcompany)
+router.post("/getprojects", getprojects)
 
 router.put("/updateprojectdetails/:id", editproject)
 

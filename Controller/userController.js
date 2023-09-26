@@ -82,7 +82,9 @@ exports.login = async (req, res) => {
           process.env.SECRET_KEY,
           { expiresIn: "2h" }
         );
-        user.password = undefined;
+        user.password = undefined;        
+
+        const companyData = await Company.findOne({adminId : `${user.adminId || user._id}`})
   
         const options = {
           expires: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
@@ -91,6 +93,7 @@ exports.login = async (req, res) => {
         res.status(200).cookie("token", token, options).json({
           status: true,
           user,
+          companyData
         });
   
       } else {
@@ -100,6 +103,28 @@ exports.login = async (req, res) => {
     } catch (error) {
         console.log(error);
         console.log("Fail to login");
+    }
+}
+
+exports.getemployees = async (req, res) => {
+    try {
+        const {adminId} = req.body
+        const users = await User.find({adminId})    
+        
+        if(users.length){
+            res.status(200).json({
+                status: true,
+                users
+            })
+        } else{
+            res.status(400).json({
+                status: false,
+                message: "Employee data not found",
+            })
+        }
+    } catch (error) {
+        console.log(error);
+        console.log("Fail to get employee details");
     }
 }
 
@@ -138,6 +163,29 @@ exports.createcompany = async (req, res) => {
     }
 }
 
+exports.getcompany = async (req, res) => {
+    try {
+        const {adminId} = req.body
+        const companyData = await Company.findOne({adminId})    
+        
+        if(companyData){
+            res.status(200).json({
+                status: true,
+                companyData
+            })
+        } else{
+            res.status(400).json({
+                status: false,
+                message: "Company data not found",
+                companyData
+            })
+        }
+    } catch (error) {
+        console.log(error);
+        console.log("Fail to get company details");
+    }
+}
+
 exports.editcompany = async (req, res) => {
     try {
        await Company.findByIdAndUpdate(req.params.id, req.body);
@@ -173,6 +221,29 @@ exports.createproject = async (req, res) => {
     } catch (error) {
         console.log(error);
         console.log("Fail to create project");
+    }
+}
+
+exports.getprojects = async (req, res) => {
+    try {
+        const {adminId} = req.body
+        const projectData = await Project.find({adminId})    
+        
+        if(projectData){
+            res.status(200).json({
+                status: true,
+                projectData
+            })
+        } else{
+            res.status(400).json({
+                status: false,
+                message: "Project data not found",
+                projectData
+            })
+        }
+    } catch (error) {
+        console.log(error);
+        console.log("Fail to get project details");
     }
 }
 
