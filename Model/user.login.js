@@ -20,6 +20,14 @@ const userLoginSchema = new mongoose.Schema({
     adminId: {
         type: String,
         default: null
+    },
+    defaultPassword: {
+        type: String,
+        default: null
+    },
+    isPasswordChange : {
+        type: Boolean,
+        require: true
     }
 })
 
