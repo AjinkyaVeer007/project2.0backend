@@ -126,6 +126,32 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.editemployee = async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.params.id, req.body);
+    res.status(200).json({
+      status: true,
+      message: "Employee details updated successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    console.log("Fail to update employee details");
+  }
+};
+
+exports.deleteemployee = async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.status(200).json({
+      status: true,
+      message: "Employee details deleted successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    console.log("Fail to delete employee details");
+  }
+};
+
 exports.getemployees = async (req, res) => {
   try {
     const { adminId } = req.body;
