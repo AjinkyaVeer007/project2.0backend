@@ -253,14 +253,14 @@ exports.createproject = async (req, res) => {
       startDate,
       proposeEndDate,
       priority,
-      managerIds,
-      employeeIds,
+      managers,
+      employees,
       adminId,
     } = req.body;
 
     // validation for frontend
     if (
-      (!name, !startDate, !proposeEndDate, !priority, !employeeIds, !adminId)
+      (!name, !startDate, !proposeEndDate, !priority, !employees, !adminId)
     ) {
       res.status(401).send("All Fields Are Mandatory");
     }
@@ -270,8 +270,8 @@ exports.createproject = async (req, res) => {
       startDate,
       proposeEndDate,
       priority,
-      managerIds,
-      employeeIds,
+      managers,
+      employees,
       adminId,
     });
 

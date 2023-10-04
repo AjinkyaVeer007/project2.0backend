@@ -17,17 +17,29 @@ const userProjectSchema = new mongoose.Schema({
         type: String,
         require: true
     },
-    managerIds: {
-        type: [],
+    managers: {
+        type: [{
+            name: String,
+            email: String,
+            id: String
+        }],
         default: null
     },
-    employeeIds: {
-        type: [],
+    employees: {
+        type: [{
+            name: String,
+            email: String,
+            id: String
+        }],
         require: true
     },
     adminId: {
         type: String,
         require: true
+    },
+    progress: {
+        type: Number,
+        default: 0
     }
 })
 
