@@ -155,12 +155,17 @@ exports.deleteemployee = async (req, res) => {
 exports.getemployees = async (req, res) => {
   try {
     const { adminId } = req.body;
-    const users = await User.find({ adminId });
+    // const users = await User.find({ adminId });
+    const managers = await User.find({ adminId, userType: "Manager" });
+    const employees = await User.find({ adminId, userType: "Employee" });
 
-    if (users.length) {
+    if (employees.length) {
       res.status(200).json({
         status: true,
-        users,
+        users : {
+          managers,
+          employees
+        },
       });
     } else {
       res.status(400).json({
