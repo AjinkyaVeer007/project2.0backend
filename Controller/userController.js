@@ -108,15 +108,33 @@ exports.login = async (req, res) => {
         adminId: `${user.adminId || user._id}`,
       });
 
+      const managers = await User.find({
+        adminId: `${user.adminId || user._id}`,
+        userType: "Manager",
+      });
+      const employees = await User.find({
+        adminId: `${user.adminId || user._id}`,
+        userType: "Employee",
+      });
+      const projects = await Project.find({
+        adminId: `${user.adminId || user._id}`,
+      });
+
       const options = {
         expires: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
       };
 
-      res.status(200).cookie("token", token, options).json({
-        status: true,
-        user,
-        companyData,
-      });
+      res
+        .status(200)
+        .cookie("token", token, options)
+        .json({
+          status: true,
+          user,
+          companyData,
+          managers: user.userType === "admin" ? managers : undefined,
+          employees: user.userType === "admin" ? employees : undefined,
+          projects,
+        });
     } else {
       res.status(400).send("Incorrect Credentails");
     }
@@ -155,16 +173,16 @@ exports.deleteemployee = async (req, res) => {
 exports.getemployees = async (req, res) => {
   try {
     const { adminId } = req.body;
-    // const users = await User.find({ adminId });
+
     const managers = await User.find({ adminId, userType: "Manager" });
     const employees = await User.find({ adminId, userType: "Employee" });
 
     if (employees.length) {
       res.status(200).json({
         status: true,
-        users : {
+        users: {
           managers,
-          employees
+          employees,
         },
       });
     } else {
@@ -264,9 +282,7 @@ exports.createproject = async (req, res) => {
     } = req.body;
 
     // validation for frontend
-    if (
-      (!name, !startDate, !proposeEndDate, !priority, !employees, !adminId)
-    ) {
+    if ((!name, !startDate, !proposeEndDate, !priority, !employees, !adminId)) {
       res.status(401).send("All Fields Are Mandatory");
     }
 

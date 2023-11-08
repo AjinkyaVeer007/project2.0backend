@@ -28,6 +28,10 @@ const userLoginSchema = new mongoose.Schema({
     isPasswordChange : {
         type: Boolean,
         require: true
+    },
+    isOnPost : {
+        type : Boolean,
+        default: true
     }
 })
 
