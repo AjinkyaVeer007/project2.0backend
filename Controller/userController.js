@@ -1,6 +1,7 @@
 const User = require("../Model/user.login");
 const Company = require("../Model/user.company");
 const Project = require("../Model/user.project");
+const Tasks = require("../Model/user.task");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 require("express");
@@ -92,7 +93,7 @@ exports.login = async (req, res) => {
       user &&
       (user.isPasswordChange
         ? await bcrypt.compare(password, user.password)
-        : await bcrypt.compare(password, user.defaultPassword))
+        : password === user.defaultPassword)
     ) {
       const token = jwt.sign(
         {
@@ -116,25 +117,43 @@ exports.login = async (req, res) => {
         adminId: `${user.adminId || user._id}`,
         userType: "Employee",
       });
-      const projects = await Project.find({
-        adminId: `${user.adminId || user._id}`,
-      });
+
+      let projects;
+      if (user.userType === "Admin") {
+        projects = await Project.find({
+          adminId: `${user._id}`,
+        });
+      } else if (user.userType === "Manager") {
+        projects = await Project.find({
+          managersId: `${user._id}`,
+        });
+      } else {
+        projects = await Project.find({
+          employeesId: `${user._id}`,
+        });
+      }
 
       const options = {
         expires: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
       };
 
-      res
-        .status(200)
-        .cookie("token", token, options)
-        .json({
+      if (user.userType === "Admin") {
+        res.status(200).cookie("token", token, options).json({
           status: true,
           user,
           companyData,
-          managers: user.userType === "admin" ? managers : undefined,
-          employees: user.userType === "admin" ? employees : undefined,
+          managers,
+          employees,
           projects,
         });
+      } else {
+        res.status(200).cookie("token", token, options).json({
+          status: true,
+          user,
+          companyData,
+          projects,
+        });
+      }
     } else {
       res.status(400).send("Incorrect Credentails");
     }
@@ -177,7 +196,7 @@ exports.getemployees = async (req, res) => {
     const managers = await User.find({ adminId, userType: "Manager" });
     const employees = await User.find({ adminId, userType: "Employee" });
 
-    if (employees.length) {
+    if (employees.length || managers.length) {
       res.status(200).json({
         status: true,
         users: {
@@ -276,14 +295,21 @@ exports.createproject = async (req, res) => {
       startDate,
       proposeEndDate,
       priority,
-      managers,
-      employees,
+      managersId,
+      employeesId,
       adminId,
     } = req.body;
 
     // validation for frontend
-    if ((!name, !startDate, !proposeEndDate, !priority, !employees, !adminId)) {
-      res.status(401).send("All Fields Are Mandatory");
+    if (
+      !name ||
+      !startDate ||
+      !proposeEndDate ||
+      !priority ||
+      !employeesId.length ||
+      !adminId
+    ) {
+      return res.status(401).send("Must be fill mandatory fields");
     }
 
     const projectData = await Project.create({
@@ -291,8 +317,8 @@ exports.createproject = async (req, res) => {
       startDate,
       proposeEndDate,
       priority,
-      managers,
-      employees,
+      managersId,
+      employeesId,
       adminId,
     });
 
@@ -309,13 +335,67 @@ exports.createproject = async (req, res) => {
 
 exports.getprojects = async (req, res) => {
   try {
-    const { adminId } = req.body;
-    const projectData = await Project.find({ adminId });
+    const { userId, userType } = req.body;
+    let projectData;
+    if (userType === "Admin") {
+      projectData = await Project.find({ adminId: userId })
+        .populate({
+          path: "managersId",
+          model: User,
+        })
+        .populate({
+          path: "employeesId",
+          model: User,
+        });
+    } else if (userType === "Manager") {
+      projectData = await Project.find({ managersId: userId })
+        .populate({
+          path: "managersId",
+          model: User,
+        })
+        .populate({
+          path: "employeesId",
+          model: User,
+        });
+    } else {
+      projectData = await Project.find({ employeesId: userId })
+        .populate({
+          path: "managersId",
+          model: User,
+        })
+        .populate({
+          path: "employeesId",
+          model: User,
+        });
+    }
 
     if (projectData) {
+      const formattedProjectData = projectData.map((project) => {
+        return {
+          _id: project._id,
+          name: project.name,
+          startDate: project.startDate,
+          proposeEndDate: project.proposeEndDate,
+          priority: project.priority,
+          managers: project.managersId.map((filteredManager) => ({
+            _id: filteredManager._id,
+            name: filteredManager.name,
+            email: filteredManager.email,
+          })),
+          employees: project.employeesId.map((filteredEmployee) => ({
+            _id: filteredEmployee._id,
+            name: filteredEmployee.name,
+            email: filteredEmployee.email,
+          })),
+          adminId: project.adminId,
+          progress: project.progress,
+          __v: project.__v,
+        };
+      });
+
       res.status(200).json({
         status: true,
-        projectData,
+        projectData: formattedProjectData,
       });
     } else {
       res.status(400).json({
@@ -345,6 +425,7 @@ exports.editproject = async (req, res) => {
 
 exports.deleteproject = async (req, res) => {
   try {
+    await Tasks.deleteMany({ projectId: req.params.id });
     await Project.findByIdAndDelete(req.params.id);
     res.status(200).json({
       status: true,
@@ -353,5 +434,181 @@ exports.deleteproject = async (req, res) => {
   } catch (error) {
     console.log(error);
     console.log("Fail to delete project details");
+  }
+};
+
+exports.createTask = async (req, res) => {
+  try {
+    const { userName, userId, adminId, projectId, userType, taskList } =
+      req.body;
+    if (!taskList.length) {
+      return res.status(401).send("Please assign task to user");
+    }
+
+    let existingTaskData;
+    if (userType === "Admin") {
+      existingTaskData = await Tasks.findOne({ adminId, projectId });
+    } else {
+      existingTaskData = await Tasks.findOne({ userId, projectId });
+    }
+
+    if (existingTaskData) {
+      existingTaskData.taskList = existingTaskData.taskList.concat(taskList);
+      await existingTaskData.save();
+    } else {
+      await Tasks.create({
+        userName,
+        userId,
+        adminId,
+        projectId,
+        taskList,
+      });
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: "Task assign successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    console.log("Fail to create project");
+  }
+};
+
+exports.getTask = async (req, res) => {
+  try {
+    const { projectId, userId } = req.params;
+
+    const taskList = await Tasks.findOne(
+      { userId, projectId },
+      { adminId: 0, userId: 0, projectId: 0 }
+    );
+
+    if (taskList) {
+      return res.status(200).json({
+        status: true,
+        taskList,
+      });
+    } else {
+      return res.status(200).json({
+        status: false,
+        message: "No task found",
+        taskList: [],
+      });
+    }
+  } catch (error) {
+    return res.status(400).json({
+      status: false,
+      message: "No task found",
+    });
+  }
+};
+
+exports.editTask = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { isCompleted, commit } = req.body;
+
+    await Tasks.findOneAndUpdate(
+      { "taskList._id": taskId },
+      {
+        $set: {
+          "taskList.$.isCompleted": isCompleted,
+          "taskList.$.commit": commit,
+        },
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      status: true,
+      message: "Task update successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      status: false,
+      message: "Fail to update task",
+    });
+  }
+};
+
+exports.projectTask = async (req, res) => {
+  try {
+    const { projectId, userType } = req.params;
+
+    let projectTask = await Project.findOne(
+      { _id: projectId },
+      { _id: 0, managersId: 1, employeesId: 1 }
+    )
+      .populate({
+        path: "managersId",
+        model: User,
+        select: "_id name email",
+      })
+      .populate({
+        path: "employeesId",
+        model: User,
+        select: "_id name email",
+      });
+
+    const managerIds = projectTask.managersId.map((manager) => manager._id);
+    const employeeIds = projectTask.employeesId.map((employee) => employee._id);
+
+    const tasksForManagers = await Tasks.find({
+      userId: { $in: managerIds },
+      projectId: projectId,
+    });
+    const tasksForEmployees = await Tasks.find(
+      {
+        userId: { $in: employeeIds },
+        projectId: projectId,
+      },
+      { userName: 0, adminId: 0, projectId: 0 }
+    );
+
+    if (userType === "Admin") {
+      return res.status(200).json({
+        status: true,
+        projectTask: {
+          managers: projectTask.managersId.map((manager) => ({
+            id: manager._id,
+            name: manager.name,
+            email: manager.email,
+            taskList: tasksForManagers.filter(
+              (task) => task.userId.toString() === manager._id.toString()
+            ),
+          })),
+          employees: projectTask.employeesId.map((employee) => ({
+            id: employee._id,
+            name: employee.name,
+            email: employee.email,
+            taskList: tasksForEmployees.filter(
+              (task) => task.userId.toString() === employee._id.toString()
+            ),
+          })),
+        },
+      });
+    } else {
+      return res.status(200).json({
+        status: true,
+        projectTask: {
+          managers: [],
+          employees: projectTask.employeesId.map((employee) => ({
+            id: employee._id,
+            name: employee.name,
+            email: employee.email,
+            taskList: tasksForEmployees.filter(
+              (task) => task.userId.toString() === employee._id.toString()
+            ),
+          })),
+        },
+      });
+    }
+  } catch (error) {
+    return res.status(400).json({
+      status: false,
+      message: "No data found",
+    });
   }
 };
