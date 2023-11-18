@@ -33,6 +33,10 @@ const userProjectSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  taskAllocationPercentage: {
+    type: Number,
+    default: 0,
+  },
 });
 
 module.exports = mongoose.model("Project", userProjectSchema);

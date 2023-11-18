@@ -146,6 +146,15 @@ exports.login = async (req, res) => {
           employees,
           projects,
         });
+      } else if (user.userType === "Manager") {
+        res.status(200).cookie("token", token, options).json({
+          status: true,
+          user,
+          companyData,
+          managers,
+          employees,
+          projects,
+        });
       } else {
         res.status(200).cookie("token", token, options).json({
           status: true,
@@ -389,6 +398,7 @@ exports.getprojects = async (req, res) => {
           })),
           adminId: project.adminId,
           progress: project.progress,
+          taskAllocationPercentage: project.taskAllocationPercentage,
           __v: project.__v,
         };
       });
