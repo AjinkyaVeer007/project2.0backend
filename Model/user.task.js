@@ -30,6 +30,10 @@ const usertaskSchema = new mongoose.Schema({
           type: String,
           default: null,
         },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
     require: true,

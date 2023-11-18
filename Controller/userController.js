@@ -439,18 +439,12 @@ exports.deleteproject = async (req, res) => {
 
 exports.createTask = async (req, res) => {
   try {
-    const { userName, userId, adminId, projectId, userType, taskList } =
-      req.body;
+    const { userName, userId, adminId, projectId, taskList } = req.body;
     if (!taskList.length) {
       return res.status(401).send("Please assign task to user");
     }
 
-    let existingTaskData;
-    if (userType === "Admin") {
-      existingTaskData = await Tasks.findOne({ adminId, projectId });
-    } else {
-      existingTaskData = await Tasks.findOne({ userId, projectId });
-    }
+    let existingTaskData = await Tasks.findOne({ userId, projectId });
 
     if (existingTaskData) {
       existingTaskData.taskList = existingTaskData.taskList.concat(taskList);
