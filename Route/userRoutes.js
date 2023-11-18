@@ -21,6 +21,7 @@ const {
   getTask,
   editTask,
   projectTask,
+  getSingleProjectDetails,
 } = require("../Controller/userController");
 
 router.post("/register", register);

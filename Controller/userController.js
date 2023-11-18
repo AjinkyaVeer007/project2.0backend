@@ -567,18 +567,11 @@ exports.projectTask = async (req, res) => {
       { userName: 0, adminId: 0, projectId: 0 }
     );
 
-    if (userType === "Admin") {
+    if (userType === "Employee") {
       return res.status(200).json({
         status: true,
         projectTask: {
-          managers: projectTask.managersId.map((manager) => ({
-            id: manager._id,
-            name: manager.name,
-            email: manager.email,
-            taskList: tasksForManagers.filter(
-              (task) => task.userId.toString() === manager._id.toString()
-            ),
-          })),
+          managers: [],
           employees: projectTask.employeesId.map((employee) => ({
             id: employee._id,
             name: employee.name,
@@ -593,7 +586,14 @@ exports.projectTask = async (req, res) => {
       return res.status(200).json({
         status: true,
         projectTask: {
-          managers: [],
+          managers: projectTask.managersId.map((manager) => ({
+            id: manager._id,
+            name: manager.name,
+            email: manager.email,
+            taskList: tasksForManagers.filter(
+              (task) => task.userId.toString() === manager._id.toString()
+            ),
+          })),
           employees: projectTask.employeesId.map((employee) => ({
             id: employee._id,
             name: employee.name,
